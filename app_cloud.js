@@ -39,7 +39,8 @@
     distilled_top250_films: 250,
     top250_master_shots: 10675,
     indexed_master_shots: 58610,
-    total_visual_library_shots: 1341472,
+    total_library_films: 61000,
+    total_visual_library_shots: 3266777,
   };
   let tunnelBase = '';
   let liveTunnelData = null;
@@ -237,21 +238,36 @@
 
   function updateHealthBanner() {
     const el = document.getElementById('healthInfo');
+    const st = (liveTunnelData && liveTunnelData.ok && liveTunnelData.stats)
+      ? liveTunnelData.stats
+      : indexStats;
+    const topFilms = Number(st.distilled_top250_films || 250);
+    const totalShots = Number(st.total_visual_library_shots || 3266777);
+    const totalFilms = Number(st.total_library_films || 61000);
+    const wanLabel = (totalShots / 10000).toFixed(1) + '万+';
+
+    const badgeEl = document.getElementById('brandBadge');
+    if (badgeEl) badgeEl.textContent = `AI 分镜副导演 · ${topFilms}部影史名片 / ${wanLabel}镜索引`;
+    const tabIdxEl = document.getElementById('tabBtnIndex');
+    if (tabIdxEl) tabIdxEl.textContent = `📚 ${topFilms}名片/${wanLabel}镜索引库`;
+    const secTitleEl = document.getElementById('indexSectionTitle');
+    if (secTitleEl) secTitleEl.textContent = `📚 蒸馏 ${topFilms} 部影史名片 · ${wanLabel} 电影分镜索引库`;
+    document.title = `金泰 Story2Board · AI 分镜副导演与 ${wanLabel} 电影分镜索引工作台`;
+
     if (!el) return;
     if (liveTunnelData && liveTunnelData.ok) {
-      const st = liveTunnelData.stats || indexStats;
       const gpus = Number(liveTunnelData.idle_gpu_count || 0);
       const gpuLabel = gpus > 0 ? `${gpus} 张空闲就绪` : '队列运行中';
       el.innerHTML =
-        `✅ 实时连线金泰 8×H100 智算中枢 ｜ <strong>${st.distilled_top250_films || 250}</strong> 部影史名片 ｜ ` +
+        `✅ 实时连线金泰 8×H100 智算中枢 ｜ <strong>${topFilms}</strong> 部影史名片 ｜ ` +
         `<strong>${Number(st.indexed_master_shots || 58610).toLocaleString()}</strong> 条精标母镜 ｜ ` +
-        `<strong>${Number(st.total_visual_library_shots || 1341472).toLocaleString()}</strong> 全量镜头 ｜ H100：<strong>${escHtml(gpuLabel)}</strong>`;
+        `<strong>${totalShots.toLocaleString()}</strong> 全量镜头（${totalFilms.toLocaleString()} 部） ｜ H100：<strong>${escHtml(gpuLabel)}</strong>`;
     } else {
-      const loadedCount = top250Rows.length || 10675;
+      const loadedCount = top250Rows.length || Number(st.top250_master_shots || 10675);
       const suffix = fullIndexLoaded ? '' : '（全量检索索引后台加载中…）';
       el.innerHTML =
-        `✅ 云端独立交互模式 ｜ <strong>250</strong> 部影史名片 ｜ ` +
-        `<strong>${loadedCount.toLocaleString()}</strong> 条精标母镜就绪（1,341,472 全库总目）${suffix}`;
+        `✅ 云端独立交互模式 ｜ <strong>${topFilms}</strong> 部影史名片 ｜ ` +
+        `<strong>${loadedCount.toLocaleString()}</strong> 条精标母镜就绪（${totalShots.toLocaleString()} 全库总目）${suffix}`;
     }
   }
 
@@ -766,6 +782,10 @@
       </div>
     ` : '';
 
+    const st = (liveTunnelData && liveTunnelData.ok && liveTunnelData.stats)
+      ? liveTunnelData.stats
+      : indexStats;
+    const totalWanStr = (Number(st.total_visual_library_shots || 3266777) / 10000).toFixed(1);
     return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -806,7 +826,7 @@
   </div>
   <h1>${escHtml(board.title || 'Story2Board 电影分镜')} · 工业级分镜场记单 (Call Sheet)</h1>
   <div class="meta-bar">
-    <strong>系统引擎：</strong>金泰 Story2Board · AI 副导演工作台（250 部影史名片 / 134.1 万镜索引 + 8×H100 一致性渲染）<br/>
+    <strong>系统引擎：</strong>金泰 Story2Board · AI 副导演工作台（250 部影史名片 / ${escHtml(totalWanStr)} 万镜索引 + 8×H100 一致性渲染）<br/>
     <strong>生成时间：</strong>${escHtml(nowStr)} ｜ <strong>画幅规格：</strong>${escHtml(cl.aspect_ratio || '16:9')}
   </div>
   <h2>壹、故事梗概 (Logline)</h2>
@@ -959,7 +979,13 @@
     }
 
     updateHealthBanner();
-    discoverTunnel();
+    if (location.hash === '#index') {
+      switchTab('index');
+    }
+    await discoverTunnel();
+    if (document.getElementById('viewIndex').style.display === 'block' && liveTunnelData && liveTunnelData.ok) {
+      triggerSearch();
+    }
 
     // Background-load full 10,675 Top-250 shots without blocking first paint
     try {
@@ -992,5 +1018,9 @@
   window.closePromptModal = closePromptModal;
   window.copyModalPromptText = copyModalPromptText;
 
+  window.addEventListener('hashchange', () => {
+    if (location.hash === '#index') switchTab('index');
+    else if (location.hash === '#director') switchTab('director');
+  });
   window.addEventListener('DOMContentLoaded', bootstrap);
 })();
