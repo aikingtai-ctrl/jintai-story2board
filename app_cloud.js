@@ -39,8 +39,8 @@
     distilled_top250_films: 250,
     top250_master_shots: 10675,
     indexed_master_shots: 58610,
-    total_library_films: 61000,
-    total_visual_library_shots: 3266777,
+    total_library_films: 66000,
+    total_visual_library_shots: 3566502,
   };
   let tunnelBase = '';
   let liveTunnelData = null;
@@ -987,11 +987,24 @@
       triggerSearch();
     }
 
-    // Background-load full 10,675 Top-250 shots without blocking first paint
+    // Background-load full 10,675 Top-250 shots via streaming gzip without blocking first paint
     try {
-      const fullResp = await fetch('./data/top250_full.json', { cache: 'default' });
-      if (fullResp.ok) {
-        const fullJson = await fullResp.json();
+      let fullJson = null;
+      const gzResp = await fetch('./data/top250_full.json.gz', { cache: 'default' });
+      if (gzResp.ok) {
+        const ab = await gzResp.arrayBuffer();
+        const b = new Uint8Array(ab);
+        if (b.length >= 2 && b[0] === 0x1f && b[1] === 0x8b && typeof DecompressionStream !== 'undefined') {
+          const ds = new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'));
+          fullJson = await new Response(ds).json();
+        } else {
+          fullJson = JSON.parse(new TextDecoder('utf-8').decode(b));
+        }
+      } else {
+        const fbResp = await fetch('./data/top250_full.json', { cache: 'default' });
+        if (fbResp.ok) fullJson = await fbResp.json();
+      }
+      if (fullJson) {
         const decoded = decodeCompactTable(fullJson);
         if (decoded.length) {
           top250Rows = decoded;
