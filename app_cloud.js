@@ -241,9 +241,9 @@
     const st = (liveTunnelData && liveTunnelData.ok && liveTunnelData.stats)
       ? liveTunnelData.stats
       : indexStats;
-    const topFilms = Number(st.distilled_top250_films || 250);
-    const totalShots = Number(st.total_visual_library_shots || 3266777);
-    const totalFilms = Number(st.total_library_films || 61000);
+    const topFilms = Math.max(Number(st.distilled_top250_films || 0), Number(indexStats.distilled_top250_films || 0), 250);
+    const totalShots = Math.max(Number(st.total_visual_library_shots || 0), Number(indexStats.total_visual_library_shots || 0), 3566502);
+    const totalFilms = Math.max(Number(st.total_library_films || 0), Number(indexStats.total_library_films || 0), 66000);
     const wanLabel = (totalShots / 10000).toFixed(1) + '万+';
 
     const badgeEl = document.getElementById('brandBadge');
